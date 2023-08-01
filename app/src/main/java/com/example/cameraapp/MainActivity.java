@@ -43,6 +43,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -55,19 +57,23 @@ import org.jsoup.select.Elements;
     private PreviewView previewView;
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
     private ImageCapture imageCapture;
-    private Button takePictureButton;
     private TextView textView;
     private BarcodeScannerOptions options;
+    private ExecutorService backgroundSearch;
     private static String bookTitle;
     private static String bookAuthor;
+    private String barcodeValue;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        barcodeValue = "A";
         setContentView(R.layout.activity_camera);
         previewView = findViewById(R.id.previewView);
         textView = findViewById(R.id.textView);
         previewView.setPreferredImplementationMode(PreviewView.ImplementationMode.SURFACE_VIEW);
-        takePictureButton = findViewById(R.id.button_capture);
+        Button takePictureButton = findViewById(R.id.button_capture);
+        Button searchButton = findViewById(R.id.button_search);
+        ExecutorService backgroundSearch = Executors.newSingleThreadExecutor();
 
         options =
                 new BarcodeScannerOptions.Builder()
@@ -85,13 +91,21 @@ import org.jsoup.select.Elements;
                 } else {
                     requestPermission();
                 }
-            } catch (ExecutionException | InterruptedException e) {}
+            } catch (ExecutionException | InterruptedException ignored) {}
         }, getExecutor());
 
         takePictureButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 enableCamera();
+            }
+        });
+
+        searchButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                backgroundSearch.execute(() -> getInfoFromISBN(barcodeValue));
+                textView.setText(barcodeValue);
             }
         });
     }
@@ -163,19 +177,22 @@ import org.jsoup.select.Elements;
     @Override
     public void analyze(@NonNull ImageProxy imageProxy){
         Image mediaImage = imageProxy.getImage();
+
         if(mediaImage != null){
             InputImage image =
                     InputImage.fromMediaImage(mediaImage, imageProxy.getImageInfo().getRotationDegrees());
             //barcode recognition
             BarcodeScanner scanner = BarcodeScanning.getClient(options);
 
+
             Task<List<Barcode>> result = scanner.process(image)
                     .addOnSuccessListener(barcodes -> {
                         for(Barcode barcode : barcodes){
-                            textView.setText(barcode.getRawValue());
-                            Toast.makeText(MainActivity.this, barcode.getRawValue(), Toast.LENGTH_SHORT).show();
-//                            getInfoFromISBN(barcode.toString());
+                            Toast.makeText(MainActivity.this, barcodeValue, Toast.LENGTH_LONG).show();
+                            barcodeValue = barcode.getRawValue();
+                            Toast.makeText(MainActivity.this, barcodeValue, Toast.LENGTH_LONG).show();
                         }
+
 //                            storyGraphBookResults();
 //                            barnesAndNobleBookResults();
 //                            kirkusBookResults();
@@ -199,7 +216,7 @@ import org.jsoup.select.Elements;
             bookAuthor = author.text();
 
         } catch (IOException e){
-            Toast.makeText(MainActivity.this, "Book could not be found.", Toast.LENGTH_SHORT).show();
+            textView.setText("a");
         }
     }
 
@@ -224,7 +241,7 @@ import org.jsoup.select.Elements;
                 System.out.println(review.text());
                 System.out.println(" ");
             }
-        } catch (Exception e) {}
+        } catch (Exception ignored) {}
     }
     //primarily here to grab editorial reviews
     private void barnesAndNobleBookResults(){
@@ -254,7 +271,7 @@ import org.jsoup.select.Elements;
                 System.out.println(" ");
             }
         }
-        catch (Exception e) {}
+        catch (Exception ignored) {}
     }
 
     private void kirkusBookResults(){
@@ -268,7 +285,7 @@ import org.jsoup.select.Elements;
             Elements reviewStuff = doc.getElementsByClass("first-alphabet book-content text-left");
 
             System.out.println(reviewStuff.first().text());
-        } catch (Exception e) {}
+        } catch (Exception ignored) {}
     }
 
     private void googleBooksResults(){
@@ -296,7 +313,7 @@ import org.jsoup.select.Elements;
                 System.out.println(modifiedReview.replace("Read full review", ""));
                 System.out.println("");
             }
-        } catch (Exception e) {}
+        } catch (Exception ignored) {}
     }
 
     }
