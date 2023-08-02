@@ -38,6 +38,7 @@ import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -63,10 +64,11 @@ import org.jsoup.select.Elements;
     private static String bookTitle;
     private static String bookAuthor;
     private String barcodeValue;
+    private ArrayList<String> reviewCollection;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        barcodeValue = "A";
+
         setContentView(R.layout.activity_camera);
         previewView = findViewById(R.id.previewView);
         textView = findViewById(R.id.textView);
@@ -104,8 +106,22 @@ import org.jsoup.select.Elements;
         searchButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                backgroundSearch.execute(() -> getInfoFromISBN(barcodeValue));
-                textView.setText(barcodeValue);
+                backgroundSearch.execute(() -> {
+                    getInfoFromISBN(barcodeValue);
+                    storyGraphBookResults();
+                    barnesAndNobleBookResults();
+                    kirkusBookResults();
+                    googleBooksResults();
+                    textView.setText(reviewCollection.toString());
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(MainActivity.this, "Search complete", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+
+                });
+
             }
         });
     }
@@ -187,16 +203,12 @@ import org.jsoup.select.Elements;
 
             Task<List<Barcode>> result = scanner.process(image)
                     .addOnSuccessListener(barcodes -> {
-                        for(Barcode barcode : barcodes){
-                            Toast.makeText(MainActivity.this, barcodeValue, Toast.LENGTH_LONG).show();
-                            barcodeValue = barcode.getRawValue();
-                            Toast.makeText(MainActivity.this, barcodeValue, Toast.LENGTH_LONG).show();
-                        }
 
-//                            storyGraphBookResults();
-//                            barnesAndNobleBookResults();
-//                            kirkusBookResults();
-//                            googleBooksResults();
+                        if (barcodes.size() > 0)
+                            barcodeValue = barcodes.get(0).getRawValue();
+                        else barcodeValue = "none";
+                        Toast.makeText(MainActivity.this, barcodeValue, Toast.LENGTH_LONG).show();
+
                     })
                     .addOnFailureListener(
                             e -> Toast.makeText(MainActivity.this, "Process Failed", Toast.LENGTH_SHORT).show());
@@ -205,6 +217,7 @@ import org.jsoup.select.Elements;
 
     //grabs information from an ISBN number
     private void getInfoFromISBN(String barcodeString){
+        reviewCollection = new ArrayList<>();
         Document doc;
         try {
             doc = Jsoup.connect("https://www.isbnsearcher.com/books/" + barcodeString)
@@ -215,9 +228,7 @@ import org.jsoup.select.Elements;
             bookTitle = title.text();
             bookAuthor = author.text();
 
-        } catch (IOException e){
-            textView.setText("a");
-        }
+        } catch (IOException ignore){}
     }
 
     //primarily here to grab customer reviews
@@ -238,8 +249,10 @@ import org.jsoup.select.Elements;
                     .get();
             Elements reviews = doc.getElementsByClass("trix-content review-explanation");
             for(Element review : reviews){
-                System.out.println(review.text());
-                System.out.println(" ");
+
+                reviewCollection.add(review.text());
+//                System.out.println(review.text());
+//                System.out.println(" ");
             }
         } catch (Exception ignored) {}
     }
@@ -262,13 +275,14 @@ import org.jsoup.select.Elements;
 
             //checks for a block quote containing an editorial review
             Elements editorialReview = doc.getElementsByTag("blockquote");
-            System.out.println(editorialReview.text());
+            reviewCollection.add(editorialReview.text());
 
             // //searches for a generic overview
             Elements reviewsSection = doc.getElementsByClass( "overview-cntnt");
             for(Element review : reviewsSection){
-                System.out.println(review.text());
-                System.out.println(" ");
+                reviewCollection.add(review.text());
+//                System.out.println(review.text());
+//                System.out.println(" ");
             }
         }
         catch (Exception ignored) {}
@@ -284,7 +298,7 @@ import org.jsoup.select.Elements;
                     .get();
             Elements reviewStuff = doc.getElementsByClass("first-alphabet book-content text-left");
 
-            System.out.println(reviewStuff.first().text());
+            reviewCollection.add(reviewStuff.first().text());
         } catch (Exception ignored) {}
     }
 
@@ -310,9 +324,11 @@ import org.jsoup.select.Elements;
             Elements reviews = doc.getElementsByClass("single-review");
             for (Element review : reviews) {
                 String modifiedReview = review.text().replace("Review:", "");
-                System.out.println(modifiedReview.replace("Read full review", ""));
-                System.out.println("");
+                reviewCollection.add(modifiedReview.replace("Read full review", ""));
+//                System.out.println(modifiedReview.replace("Read full review", ""));
+//                System.out.println("");
             }
+
         } catch (Exception ignored) {}
     }
 
