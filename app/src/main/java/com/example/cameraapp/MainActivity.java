@@ -3,6 +3,7 @@ package com.example.cameraapp;
 import static android.content.ContentValues.TAG;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.Image;
 import android.os.Bundle;
@@ -56,9 +57,9 @@ import org.jsoup.select.Elements;
 
 @ExperimentalGetImage public class MainActivity extends AppCompatActivity implements ImageAnalysis.Analyzer{
     private PreviewView previewView;
+    private TextView otherTextView;
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
     private ImageCapture imageCapture;
-    private TextView textView;
     private BarcodeScannerOptions options;
     private ExecutorService backgroundSearch;
     private static String bookTitle;
@@ -70,12 +71,13 @@ import org.jsoup.select.Elements;
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_camera);
+        otherTextView = findViewById(R.id.otherTextView);
         previewView = findViewById(R.id.previewView);
-        textView = findViewById(R.id.textView);
         previewView.setPreferredImplementationMode(PreviewView.ImplementationMode.SURFACE_VIEW);
         Button takePictureButton = findViewById(R.id.button_capture);
         Button searchButton = findViewById(R.id.button_search);
         ExecutorService backgroundSearch = Executors.newSingleThreadExecutor();
+
 
         options =
                 new BarcodeScannerOptions.Builder()
@@ -100,6 +102,7 @@ import org.jsoup.select.Elements;
             @Override
             public void onClick(View v) {
                 enableCamera();
+
             }
         });
 
@@ -107,19 +110,16 @@ import org.jsoup.select.Elements;
             @Override
             public void onClick(View v) {
                 backgroundSearch.execute(() -> {
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Search Initiated", Toast.LENGTH_SHORT).show());
                     getInfoFromISBN(barcodeValue);
                     storyGraphBookResults();
                     barnesAndNobleBookResults();
                     kirkusBookResults();
                     googleBooksResults();
-                    textView.setText(reviewCollection.toString());
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Toast.makeText(MainActivity.this, "Search complete", Toast.LENGTH_SHORT).show();
-                        }
-                    });
-
+//                    otherTextView.setText(reviewCollection.toString());
+                    Intent searchIntent = new Intent(MainActivity.this, TextDisplay.class);
+                    startActivity(searchIntent);
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Search Complete", Toast.LENGTH_SHORT).show());
                 });
 
             }
@@ -204,10 +204,12 @@ import org.jsoup.select.Elements;
             Task<List<Barcode>> result = scanner.process(image)
                     .addOnSuccessListener(barcodes -> {
 
-                        if (barcodes.size() > 0)
+                        if (barcodes.size() > 0) {
                             barcodeValue = barcodes.get(0).getRawValue();
+                            Toast.makeText(MainActivity.this, barcodeValue, Toast.LENGTH_LONG).show();
+                        }
                         else barcodeValue = "none";
-                        Toast.makeText(MainActivity.this, barcodeValue, Toast.LENGTH_LONG).show();
+
 
                     })
                     .addOnFailureListener(
@@ -249,10 +251,7 @@ import org.jsoup.select.Elements;
                     .get();
             Elements reviews = doc.getElementsByClass("trix-content review-explanation");
             for(Element review : reviews){
-
                 reviewCollection.add(review.text());
-//                System.out.println(review.text());
-//                System.out.println(" ");
             }
         } catch (Exception ignored) {}
     }
@@ -281,8 +280,6 @@ import org.jsoup.select.Elements;
             Elements reviewsSection = doc.getElementsByClass( "overview-cntnt");
             for(Element review : reviewsSection){
                 reviewCollection.add(review.text());
-//                System.out.println(review.text());
-//                System.out.println(" ");
             }
         }
         catch (Exception ignored) {}
@@ -325,11 +322,14 @@ import org.jsoup.select.Elements;
             for (Element review : reviews) {
                 String modifiedReview = review.text().replace("Review:", "");
                 reviewCollection.add(modifiedReview.replace("Read full review", ""));
-//                System.out.println(modifiedReview.replace("Read full review", ""));
-//                System.out.println("");
             }
 
         } catch (Exception ignored) {}
     }
 
+    public String getReviews() {
+        if (reviewCollection != null){
+            return reviewCollection.toString();
+        } else return "guh";
     }
+}
