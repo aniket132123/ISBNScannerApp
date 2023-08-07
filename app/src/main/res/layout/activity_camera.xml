@@ -61,14 +61,4 @@
         </androidx.camera.view.PreviewView>
     </FrameLayout>
 
-    <TextView
-        android:id="@+id/otherTextView"
-        android:layout_width="335dp"
-        android:layout_height="54dp"
-        android:layout_marginStart="41dp"
-        android:layout_marginBottom="6dp"
-        android:visibility="visible"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
 </androidx.constraintlayout.widget.ConstraintLayout>
