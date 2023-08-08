@@ -3,8 +3,8 @@ package com.example.cameraapp;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.camera.core.ExperimentalGetImage;
 
@@ -20,6 +20,8 @@ import java.util.concurrent.Executors;
 
 @ExperimentalGetImage public class TextDisplay extends MainActivity {
     private TextView textView;
+    private EditText inputTextAuthor;
+    private EditText inputTextBook;
     private static String bookTitle;
     private static String bookAuthor;
     private ArrayList<String> reviewCollection;
@@ -28,7 +30,10 @@ import java.util.concurrent.Executors;
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_text_display);
         textView = findViewById(R.id.textView);
+        inputTextAuthor = findViewById(R.id.inputTextAuthor);
+        inputTextBook = findViewById(R.id.inputTextBook);
         Button backButton = findViewById(R.id.back_button);
+        Button textSearchButton = findViewById(R.id.textSearchButton);
         ExecutorService backgroundSearch = Executors.newSingleThreadExecutor();
         backgroundSearch.execute(() -> {
             Intent receiverIntent = getIntent();
@@ -44,6 +49,18 @@ import java.util.concurrent.Executors;
         backButton.setOnClickListener(v -> {
             Intent returnIntent = new Intent(TextDisplay.this, MainActivity.class);
             startActivity(returnIntent);
+        });
+
+        textSearchButton.setOnClickListener(v -> {
+            bookTitle = inputTextBook.getText().toString();
+            bookAuthor = inputTextAuthor.getText().toString();
+            backgroundSearch.execute(() -> {
+                storyGraphBookResults();
+                barnesAndNobleBookResults();
+                kirkusBookResults();
+                googleBooksResults();
+                textView.setText(reviewCollection.toString());
+            });
         });
 
     }
