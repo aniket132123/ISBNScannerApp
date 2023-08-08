@@ -52,6 +52,7 @@ import java.util.concurrent.Executors;
         });
 
         textSearchButton.setOnClickListener(v -> {
+            textView.setText(" ");
             bookTitle = inputTextBook.getText().toString();
             bookAuthor = inputTextAuthor.getText().toString();
             backgroundSearch.execute(() -> {
