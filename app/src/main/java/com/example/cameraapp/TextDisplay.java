@@ -2,6 +2,7 @@ package com.example.cameraapp;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.method.ScrollingMovementMethod;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -30,6 +31,7 @@ import java.util.concurrent.Executors;
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_text_display);
         textView = findViewById(R.id.textView);
+        textView.setMovementMethod(new ScrollingMovementMethod());
         inputTextAuthor = findViewById(R.id.inputTextAuthor);
         inputTextBook = findViewById(R.id.inputTextBook);
         Button backButton = findViewById(R.id.back_button);
@@ -69,15 +71,30 @@ import java.util.concurrent.Executors;
         reviewCollection = new ArrayList<>();
         Document doc;
         try {
-            doc = Jsoup.connect("https://www.isbnsearcher.com/books/" + barcodeString)
+            doc = Jsoup.connect("https://www.abebooks.com/servlet/SearchResults?kn="+ barcodeString +"&sts=t&cm_sp=SearchF-_-topnav-_-Results&ds=20")
                     .timeout(5000)
+                    .userAgent("Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)")
                     .get();
-            Elements title = doc.select("h1");
-            Elements author = doc.getElementsByAttributeValueContaining("href", "author");
-            bookTitle = title.text();
-            bookAuthor = author.text();
+            Elements title = doc.getElementsByAttributeValueContaining("data-cy", "listing-title");
+            Elements author = doc.getElementsByTag("strong");
+            bookTitle = title.get(0).text();
+            bookAuthor = author.get(0).text().trim();
 
-        } catch (IOException ignore){
+            if(bookAuthor.contains(",")){
+                StringBuilder tempBookAuthor = new StringBuilder();
+                for(int i = bookAuthor.indexOf(",") + 1; i < bookAuthor.length(); i++){
+                    tempBookAuthor.append(bookAuthor.charAt(i));
+                }
+                if (tempBookAuthor.charAt(0) == ' ') {
+                    tempBookAuthor.setCharAt(0, '\0');
+                }
+                tempBookAuthor.append(" ");
+                for(int i = 0; i < bookAuthor.indexOf(","); i++){
+                    tempBookAuthor.append(bookAuthor.charAt(i));
+                }
+                bookAuthor = tempBookAuthor.toString().trim();
+            }
+        } catch (IOException | IndexOutOfBoundsException ignore){
             reviewCollection.add("Book could not be found.");
         }
     }
@@ -89,7 +106,7 @@ import java.util.concurrent.Executors;
             String modifiedBookTitle = bookTitle.replace(" ", "%20");
             String modifiedAuthorName = bookAuthor.replace(" ", "%20");
 
-            doc = Jsoup.connect("https://app.thestorygraph.com/browse?search_term=" + modifiedBookTitle + modifiedAuthorName)
+            doc = Jsoup.connect("https://app.thestorygraph.com/browse?search_term=" + modifiedBookTitle + "%20" + modifiedAuthorName)
                     .timeout(10000)
                     .get();
 
