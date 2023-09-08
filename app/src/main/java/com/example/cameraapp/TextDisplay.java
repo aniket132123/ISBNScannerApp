@@ -15,7 +15,6 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -25,10 +24,11 @@ import java.util.concurrent.Executors;
     private EditText inputTextBook;
     private static String bookTitle;
     private static String bookAuthor;
-    private ArrayList<String> reviewCollection;
+    private StringBuilder reviewBuilder;
     @Override
     protected void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
+        reviewBuilder = new StringBuilder();
         setContentView(R.layout.activity_text_display);
         textView = findViewById(R.id.textView);
         textView.setMovementMethod(new ScrollingMovementMethod());
@@ -45,7 +45,7 @@ import java.util.concurrent.Executors;
             barnesAndNobleBookResults();
             kirkusBookResults();
             googleBooksResults();
-            textView.setText(reviewCollection.toString());
+            textView.setText(reviewBuilder.toString());
         });
 
         backButton.setOnClickListener(v -> {
@@ -62,13 +62,12 @@ import java.util.concurrent.Executors;
                 barnesAndNobleBookResults();
                 kirkusBookResults();
                 googleBooksResults();
-                textView.setText(reviewCollection.toString());
+                textView.setText(reviewBuilder.toString());
             });
         });
 
     }
     private void getInfoFromISBN(String barcodeString){
-        reviewCollection = new ArrayList<>();
         Document doc;
         try {
             doc = Jsoup.connect("https://www.abebooks.com/servlet/SearchResults?kn="+ barcodeString +"&sts=t&cm_sp=SearchF-_-topnav-_-Results&ds=20")
@@ -95,7 +94,7 @@ import java.util.concurrent.Executors;
                 bookAuthor = tempBookAuthor.toString().trim();
             }
         } catch (IOException | IndexOutOfBoundsException ignore){
-            reviewCollection.add("Book could not be found.");
+            reviewBuilder.append("Book could not be found.");
         }
     }
 
@@ -117,7 +116,9 @@ import java.util.concurrent.Executors;
                     .get();
             Elements reviews = doc.getElementsByClass("trix-content review-explanation");
             for(Element review : reviews){
-                reviewCollection.add(review.text());
+                reviewBuilder.append(review.text());
+                reviewBuilder.append("\n");
+                reviewBuilder.append("\n");
             }
 
         } catch (Exception ignored) {}
@@ -141,12 +142,14 @@ import java.util.concurrent.Executors;
 
             //checks for a block quote containing an editorial review
             Elements editorialReview = doc.getElementsByTag("blockquote");
-            reviewCollection.add(editorialReview.text());
+            reviewBuilder.append(editorialReview.text());
 
             // //searches for a generic overview
             Elements reviewsSection = doc.getElementsByClass( "overview-cntnt");
             for(Element review : reviewsSection){
-                reviewCollection.add(review.text());
+                reviewBuilder.append(review.text());
+                reviewBuilder.append("\n");
+                reviewBuilder.append("\n");
             }
         }
         catch (Exception ignored) {}
@@ -162,7 +165,9 @@ import java.util.concurrent.Executors;
                     .get();
             Elements reviewStuff = doc.getElementsByClass("first-alphabet book-content text-left");
 
-            reviewCollection.add(reviewStuff.first().text());
+            reviewBuilder.append(reviewStuff.first().text());
+            reviewBuilder.append("\n");
+            reviewBuilder.append("\n");
         } catch (Exception ignored) {}
     }
 
@@ -188,7 +193,9 @@ import java.util.concurrent.Executors;
             Elements reviews = doc.getElementsByClass("single-review");
             for (Element review : reviews) {
                 String modifiedReview = review.text().replace("Review:", "");
-                reviewCollection.add(modifiedReview.replace("Read full review", ""));
+                reviewBuilder.append(modifiedReview.replace("Read full review", ""));
+                reviewBuilder.append("\n");
+                reviewBuilder.append("\n");
             }
 
 
