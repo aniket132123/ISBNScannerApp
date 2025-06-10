@@ -36,7 +36,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 
 
-
 @ExperimentalGetImage public class MainActivity extends AppCompatActivity implements ImageAnalysis.Analyzer{
     private PreviewView previewView;
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
